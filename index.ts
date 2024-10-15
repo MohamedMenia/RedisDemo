@@ -12,6 +12,7 @@ import type { RedisClientType } from "redis";
 const PORT = process.env.PORT || 3000;
 const app = express();
 app.use(express.json());
+
 //configure Redis
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.redis = redisClient as RedisClientType;
