@@ -13,9 +13,8 @@ export const checkRestaurantExists = async (
     return errorResponse(res, 400, "Restaurant ID is required");
   }
   try {
-    const client = await initRedisClient();
     const restaurantKey = restaurantKeyById(restaurantId);
-    const exists = await client.exists(restaurantKey);
+    const exists = await req.redis.exists(restaurantKey);
     if (!exists) {
       return errorResponse(res, 404, "Restaurant not found");
     }

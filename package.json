@@ -16,11 +16,10 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7",
-    "ts-node": "^10.9.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.7.5",
-    "tsx": "^4.19.1",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   }
 }
