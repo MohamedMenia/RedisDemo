@@ -4,7 +4,7 @@ import express, {
   type NextFunction,
 } from "express";
 import restaurantsRouter from "./routes/restaurants.js";
-import culisinesRouter from "./routes/culisines.js";
+import cuisinesRouter from "./routes/cuisines.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import redisClient from "./config/redisConfig.js";
 import type { RedisClientType } from "redis";
@@ -20,7 +20,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use("/restaurants", restaurantsRouter);
-app.use("/culisines", culisinesRouter);
+app.use("/cuisines", cuisinesRouter);
 app.use(errorHandler);
 
 app
