@@ -5,6 +5,9 @@ import {
   restaurantKeyById,
   reviewKeyById,
   reviewDetailsKeyById,
+  cuisineKey,
+  restaurantCuisinesKeyById,
+  cuisinesKey,
 } from "../utils/keys.js";
 import { errorResponse, successResponse } from "../utils/responses.js";
 import type { TReviewSchema } from "../schemas/review.js";
@@ -19,9 +22,21 @@ export const createRestaurant = async (
     const id = nanoid();
     const restaurantKey = restaurantKeyById(id);
     const hashData = { id, name: data.name, location: data.location };
-    const addResult = await req.redis.hSet(restaurantKey, hashData);
-    console.log(`Added${addResult} to restaurant`);
-    return successResponse(res, hashData, "added new restaurant");
+    await Promise.all([
+      req.redis.hSet(restaurantKey, hashData),
+      ...data.cuisines.map((cuisine) =>
+        Promise.all([
+          req.redis.sAdd(cuisinesKey, cuisine),
+          req.redis.sAdd(cuisineKey(cuisine), id),
+          req.redis.sAdd(restaurantCuisinesKeyById(id), cuisine),
+        ])
+      ),
+    ]);
+    return successResponse(
+      res,
+      { ...hashData, cuisines: data.cuisines },
+      "added new restaurant"
+    );
   } catch (err) {
     next(err);
   }
@@ -36,11 +51,15 @@ export const getRestaurantById = async (
   const { restaurantId } = req.params;
   try {
     const restaurantKey = restaurantKeyById(restaurantId);
-    const [viewCount, restaurantData] = await Promise.all([
+    const [viewCount, restaurantData, cuisines] = await Promise.all([
       req.redis.hIncrBy(restaurantKey, "viewCount", 1),
       req.redis.hGetAll(restaurantKey),
+      req.redis.sMembers(restaurantCuisinesKeyById(restaurantId)),
     ]);
-    successResponse(res, restaurantData);
+    successResponse(res, {
+      ...restaurantData,
+      cuisines
+    });
   } catch (err) {
     next(err);
   }

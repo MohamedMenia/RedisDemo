@@ -27,6 +27,8 @@ router.get(
   checkRestaurantExists,
   ResturantController.getReviews
 );
+
+//delete Review
 router.delete(
   "/:restaurantId/reviews/:reviewId",
   checkRestaurantExists,
