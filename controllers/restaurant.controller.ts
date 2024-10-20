@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import { type TResturantSchema } from "../schemas/restaurants.js";
+import {
+  type TResturantDetailsSchema,
+  type TResturantSchema,
+} from "../schemas/restaurants.js";
 import { nanoid } from "nanoid";
 import {
   restaurantKeyById,
@@ -9,6 +12,7 @@ import {
   restaurantCuisinesKeyById,
   cuisinesKey,
   restaurantByRatingKey,
+  restaurantDetailsKeyById,
 } from "../utils/keys.js";
 import { errorResponse, successResponse } from "../utils/responses.js";
 import type { TReviewSchema } from "../schemas/review.js";
@@ -81,14 +85,16 @@ export const getRestaurantById = async (
   const { restaurantId } = req.params;
   try {
     const restaurantKey = restaurantKeyById(restaurantId);
-    const [viewCount, restaurantData, cuisines] = await Promise.all([
+    const [viewCount, restaurantData, cuisines, details] = await Promise.all([
       req.redis.hIncrBy(restaurantKey, "viewCount", 1),
       req.redis.hGetAll(restaurantKey),
       req.redis.sMembers(restaurantCuisinesKeyById(restaurantId)),
+      req.redis.json.get(restaurantDetailsKeyById(restaurantId)),
     ]);
     successResponse(res, {
       ...restaurantData,
       cuisines,
+      details
     });
   } catch (err) {
     next(err);
@@ -182,5 +188,22 @@ export const ReviewDelete = async (
     return successResponse(res, reviewId, "Review deleted successfully");
   } catch (err) {
     next(err);
+  }
+};
+
+export const addRestDetails = async (
+  req: Request<{ restaurantId: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  const { restaurantId } = req.params;
+  const data = req.body as TResturantDetailsSchema;
+
+  try {
+    const restaurantDetailsKey = restaurantDetailsKeyById(restaurantId);
+    const details = await req.redis.json.set(restaurantDetailsKey, ".", data);
+    return successResponse(res, details);
+  } catch (error) {
+    next(error);
   }
 };

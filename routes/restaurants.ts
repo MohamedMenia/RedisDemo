@@ -1,6 +1,9 @@
 import express from "express";
 import { validate } from "../middlewares/validate.js";
-import { ResturantSchema } from "../schemas/restaurants.js";
+import {
+  ResturantSchema,
+  ResturantDetailsSchema,
+} from "../schemas/restaurants.js";
 import { checkRestaurantExists } from "../middlewares/checkRestaurantId.js";
 import * as ResturantController from "../controllers/restaurant.controller.js";
 import { ReviewSchema } from "../schemas/review.js";
@@ -42,6 +45,14 @@ router.get(
   "/:restaurantId",
   checkRestaurantExists,
   ResturantController.getRestaurantById
+);
+
+//add restaurant Details
+router.post(
+  "/:restaurantId/details",
+  checkRestaurantExists,
+  validate(ResturantDetailsSchema),
+  ResturantController.addRestDetails
 );
 
 export default router;
