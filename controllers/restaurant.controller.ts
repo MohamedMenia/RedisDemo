@@ -8,6 +8,7 @@ import {
   cuisineKey,
   restaurantCuisinesKeyById,
   cuisinesKey,
+  restaurantByRatingKey,
 } from "../utils/keys.js";
 import { errorResponse, successResponse } from "../utils/responses.js";
 import type { TReviewSchema } from "../schemas/review.js";
@@ -24,6 +25,10 @@ export const createRestaurant = async (
     const hashData = { id, name: data.name, location: data.location };
     await Promise.all([
       req.redis.hSet(restaurantKey, hashData),
+      req.redis.zAdd(restaurantByRatingKey, {
+        score: 0,
+        value: id,
+      }),
       ...data.cuisines.map((cuisine) =>
         Promise.all([
           req.redis.sAdd(cuisinesKey, cuisine),
@@ -42,6 +47,31 @@ export const createRestaurant = async (
   }
   res.send("Restaurants");
 };
+export const getRestaurants = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { page = 1, limit = 10 } = req.query;
+  const start = (Number(page) - 1) * Number(limit);
+  const end = start + Number(limit) - 1;
+  try {
+    const restaurantIds = await req.redis.zRange(
+      restaurantByRatingKey,
+      start,
+      end,
+      {
+        REV: true,
+      }
+    );
+    const restaurants = await Promise.all(
+      restaurantIds.map((id) => req.redis.hGetAll(restaurantKeyById(id)))
+    );
+    return successResponse(res, restaurants);
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getRestaurantById = async (
   req: Request<{ restaurantId: string }>,
@@ -58,7 +88,7 @@ export const getRestaurantById = async (
     ]);
     successResponse(res, {
       ...restaurantData,
-      cuisines
+      cuisines,
     });
   } catch (err) {
     next(err);
@@ -82,9 +112,19 @@ export const createReview = async (
       rating: data.rating,
       timestamp: Date.now(),
     };
-    await Promise.all([
+    const restaurantKey = restaurantKeyById(restaurantId);
+    const [reviewCount, setResult, totalStars] = await Promise.all([
       req.redis.lPush(reviewKey, reviewId),
       req.redis.hSet(reviewDetailsKey, reviewData),
+      req.redis.hIncrByFloat(restaurantKey, "totalStars", data.rating),
+    ]);
+    const averageRating = Number((totalStars / reviewCount).toFixed(1));
+    await Promise.all([
+      req.redis.zAdd(restaurantByRatingKey, {
+        score: averageRating,
+        value: restaurantId,
+      }),
+      req.redis.hSet(restaurantKey, "avgStars", averageRating),
     ]);
     return successResponse(res, reviewData, "review added successfully");
   } catch (err) {

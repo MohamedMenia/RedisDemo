@@ -13,6 +13,8 @@ router.post(
   ResturantController.createRestaurant
 );
 
+router.get("/", ResturantController.getRestaurants);
+
 //create a new review
 router.post(
   "/:restaurantId/reviews",
